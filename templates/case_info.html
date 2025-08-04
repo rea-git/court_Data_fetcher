@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Details</title>
+</head>
+<body>
+    <a href="/">Go_Back</a>
+    <p>
+       {% if result.get("error") %}
+  <div class="alert alert-danger">{{ result.error }}</div>
+{% else %}
+  <table class="table table-bordered table-striped">
+    <tr><th>Case Number</th><td>{{ result.case_number }}</td></tr>
+    <tr><th>Status</th><td>{{ result.status }}</td></tr>
+    <tr><th>Petitioner</th><td>{{ result.petitioner }}</td></tr>
+    <tr><th>Respondent</th><td>{{ result.respondent }}</td></tr>
+    <tr><th>Next Date</th><td>{{ result.next_date }}</td></tr>
+    <tr><th>Last Date</th><td>{{ result.last_date }}</td></tr>
+    <tr><th>Court No</th><td>{{ result.court_no }}</td></tr>
+  </table>
+{% endif %}
+
+    </p>
+</body>
+</html>
