@@ -18,14 +18,21 @@ db = SQLAlchemy(app)
 class Case:
     id = db.Column(db.Integer,primary_key=True)
     case_type = db.Column(db.String(), nullable =False)
-    case_num=db.Column(db.Integer, nullable = False)
-    case_year= db.Column(db.Integer, nullable = False)
+    case_num=db.Column(db.String(), nullable = False)
+    case_year= db.Column(db.String(), nullable = False)
     case_status = db.Column(db.String())
     petitioner = db.Column(db.String())
     respondent =db.Column(db.String())
-    listing_date =db.Column(db.Date)
-    next_date = db.Column(db.Date)
+    listing_date =db.Column(db.String())
+    next_date = db.Column(db.String())
     court_no = db.Column(db.String())
+class Orders:
+    id=db.Column(db.Integer,primary_key=True)
+    case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
+    order_date = db.Column(db.String())
+    corrigendum_link = db.Column(db.String())
+    corrigendum_date = db.Column(db.String())
+    hindi_order = db.Column(db.String())
 
 driver = webdriver.Chrome()
 def driver_load():
@@ -75,6 +82,33 @@ def index():
             petitioner_info_raw = cols[2].get_attribute("innerHTML").strip().split("<br>")
             listing_info_raw = cols[3].get_attribute("innerHTML").strip().split("<br>")
 
+            orders_link_tag = cols[1].find_elements(By.TAG_NAME, "a")[-1]
+            orders_url = orders_link_tag.get_attribute("href")
+
+            driver.execute_script("window.open('');")
+            driver.switch_to.window(driver.window_handles[1])
+            driver.get(orders_url)
+
+            orders_page_html = driver.page_source
+            soup = BeautifulSoup(orders_page_html,"html.parser")
+            orders_table = soup.find("table",{"id":"caseTable"})
+            orders = []
+
+            if orders_table:
+                rows = orders_table.find("tbody").find_all("tr")
+                for row in rows:
+                    order_cols = row.find_all("td")
+
+                    order_dict = {
+                        "order_date": order_cols[2].text.strip() if len(order_cols) > 2 else "N/A",
+                "corrigendum_link": order_cols[3].find("a")["href"].strip() if len(order_cols) > 3 and order_cols[3].find("a") else None,
+                "corrigendum_date": order_cols[3].text.strip() if len(order_cols) > 3 else None,
+                "hindi_order": order_cols[4].find("a")["href"].strip() if len(order_cols) > 4 and order_cols[4].find("a") else None
+                    }
+                    orders.append(order_dict)
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+
             def clean_html(text):
                 return BeautifulSoup(text, "html.parser").text.strip()
 
@@ -92,7 +126,16 @@ def index():
                 "last_date": listing_info[1].replace("Last Date:", "").strip() if len(listing_info) > 1 else "N/A",
                 "court_no": listing_info[2].replace("COURT NO:", "").strip() if len(listing_info) > 2 else "N/A"
             }
+            #case_obj = Case(case_type = case_type, case_num = case_num, case_year = case_year, case_status=case_data['status'],petitioner = case_data['petitioner'],respondent = case_data['respondent'],listing_date = case_data['last_date'],next_date = case_data['next_date'],court_no=case_data['court_no'])
+
+            #db.session.add(case_obj)
+            #db.session.commit()
         else:
             case_data = {"error": "Unexpected table format"}
         return render_template('case_info.html',result = case_data)
-app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
+    #with app.app_context():
+        #db.create_all()
+
+

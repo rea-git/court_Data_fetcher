@@ -22,6 +22,46 @@
   </table>
 {% endif %}
 
+
+  <h4>Orders</h4>
+  {% if orders %}
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Order Date</th>
+        <th>Corrigendum Link</th>
+        <th>Corrigendum Date</th>
+        <th>Hindi Order</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+        <tr>
+          <td>{{ order.order_date }}</td>
+          <td>
+            {% if order.corrigendum_link %}
+              <a href="{{ order.corrigendum_link }}" target="_blank">View Corrigendum</a>
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+          <td>{{ order.corrigendum_date or 'N/A' }}</td>
+          <td>
+            {% if order.hindi_order %}
+              <a href="{{ order.hindi_order }}" target="_blank">View Hindi Order</a>
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div class="alert alert-info">No orders found for this case.</div>
+{% endif %}
+
+
     </p>
 </body>
 </html>
