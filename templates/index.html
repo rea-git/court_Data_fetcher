@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+<body>
+    <div>
+        <h1>Case Status</h1>
+    </div>
+    <div>
+        <form action="/", method="post">
+            <div class = 'case_type'>
+                <label for="case_type">Case Type:</label>
+                <select name="case_type" id="case_type">
+                    {% for case_type in case_type_options %}
+                    <option value="{{case_type}}">{{case_type}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+          <br>
+          <label for="case_num">Case Number</label>
+            <input type="text" name="case_num" id="case_num"><br>
+            <div class = 'case_num'>
+                <label for="case_year">Year</label>
+                <select name="case_year" id="case_year">
+                     for case_year in case_year_options %}
+                    <option value="{{case_year}}">{{case_year}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <br>
+
+            <div class = 'captcha'>
+                <label>
+                    <span>
+                        {{captcha_id}}
+                    </span>
+                </label>
+                <label for="captcha">Enter Captcha Code Here:</label>
+                <input type="number" name="captcha_code" id="captcha">
+            </div>
+            <input type="submit" value="submit">
+        </form>
+    </div>
+</body>
+</html>
