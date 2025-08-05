@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Case Details</title>
+    <!--<link rel="stylesheet" href="{{ url_for('static', filename='case_info.css') }}">-->
 </head>
 <body>
     <a href="/">Go_Back</a>
+    <h1>Case Information</h1>
+    <h2>{{result.case_number}}</h2>
     <p>
        {% if result.get("error") %}
   <div class="alert alert-danger">{{ result.error }}</div>
@@ -14,7 +17,6 @@
   <table class="table table-bordered table-striped">
     <tr><th>Case Number</th><td>{{ result.case_number }}</td></tr>
     <tr><th>Status</th><td>{{ result.status }}</td></tr>
-    <tr><th>Orders</th><td><a href="{{ result.orders_url }}">Orders_url</a></td></tr>
     <tr><th>Petitioner</th><td>{{ result.petitioner }}</td></tr>
     <tr><th>Respondent</th><td>{{ result.respondent }}</td></tr>
     <tr><th>Next Date</th><td>{{ result.next_date }}</td></tr>
@@ -24,7 +26,7 @@
 {% endif %}
 
 
-  <h4>Orders</h4>
+  <h2>Orders</h2>
   {% if orders %}
   <table class="table table-bordered table-striped">
     <thead>

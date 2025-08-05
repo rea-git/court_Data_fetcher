@@ -1,21 +1,17 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for
 from flask_restful import Resource, Api, reqparse
 from flask_sqlalchemy import SQLAlchemy
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.common.exceptions import ElementClickInterceptedException
 from bs4 import BeautifulSoup
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 import time
-
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'test' 
 
 db = SQLAlchemy(app)
 
@@ -30,6 +26,7 @@ class Case(db.Model):
     listing_date =db.Column(db.String())
     next_date = db.Column(db.String())
     court_no = db.Column(db.String())
+    orders = db.relationship('Orders', backref='case', lazy=True)
 class Orders(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
@@ -38,16 +35,16 @@ class Orders(db.Model):
     corrigendum_date = db.Column(db.String())
     hindi_order = db.Column(db.String())
 
-chrome_options = Options()
-chrome_options.add_argument("--headless=new")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--no-sandbox")
-driver = webdriver.Chrome(options = chrome_options)
 
 def driver_load():
-    driver.get("https://delhihighcourt.nic.in/app/get-case-type-status")
-    time.sleep(1)
-
+    """chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    driver = webdriver.Chrome(options = chrome_options)"""
+    driver=webdriver.Chrome()
+    return driver
+def case_options(driver):
     case_type_dropdown = Select(driver.find_element(By.ID, 'case_type'))
     case_type_options = [option.text.strip() for option in case_type_dropdown.options if option.text.strip()]
 
@@ -56,20 +53,62 @@ def driver_load():
 
     captcha_element = driver.find_element(By.ID, "captcha-code")
     captcha_code = captcha_element.text
-
     return case_type_options, case_year_options, captcha_code
 
 @app.route('/',methods = ['POST','GET'])
 def index():
+    
     if request.method =='GET':
-        case_type_options,case_year_options,captcha_code = driver_load() 
-        return render_template('index.html', captcha_code = captcha_code, case_type_options = case_type_options, case_year_options=case_year_options)
+        print("Loading driver...")
+        driver = driver_load()
+        print("Opening URL...")
+        driver.get("https://delhihighcourt.nic.in/app/get-case-type-status")
+        print("Sleeping...")
+        time.sleep(2)
+        print("Getting case options...")
+        case_type_options,case_year_options,captcha_code = case_options(driver)
+        print("Getting cases from DB...")
+        case_list=[]
+        case_history = Case.query.all()
+        if len(case_history)>0:
+            for case in case_history:
+                case_data = {
+                "case_number": case.case_number,
+                "status": case.status,
+                "petitioner": case.petitioner,
+                "respondent": case.respondent,
+                "next_date": case.next_date,
+                "last_date": case.last_date,
+                "court_no": case.court_no
+            }
+                order_history = case.orders[0] if case.orders else None
+                
+                order_data = {
+                    "order_date": order_history.order_date if order_history else "N/A",
+                    "corrigendum_link": order_history.corrigendum_link if order_history else None,
+                    "corrigendum_date": order_history.corrigendum_date if order_history else None,
+                    "hindi_order": order_history.hindi_date if order_history else None
+                            }
+                case_list.append([case_data,order_data])
+            
+        session['captcha_code'] = captcha_code
+        session['case_type_options'] = case_type_options
+        session['case_year_options'] = case_year_options
+
+        app.config['driver'] = driver
+
+        return render_template('index.html', captcha_code = captcha_code, case_type_options = case_type_options, case_year_options=case_year_options,case_list=case_list)
     else:
+        driver = app.config.get('driver') 
         case_type = request.form.get("case_type")
         case_num  =request.form.get("case_num")
         case_year = request.form.get("case_year")
         user_captcha = request.form.get("captcha_code")
 
+        if user_captcha !=session.get("captcha_code"):
+            driver.quit()
+            return render_template("error.html",message = "CAPTCHA is incorrect. Pleaes try again")
+        
         case_type_element = Select(driver.find_element(By.ID,"case_type"))
         case_type_element.select_by_visible_text(case_type)
 
@@ -83,8 +122,8 @@ def index():
         search = driver.find_element(By.ID,"search")
         driver.execute_script("arguments[0].click()",search)
 
-        time.sleep(5)
-
+        time.sleep(2)
+        
         row = driver.find_element(By.CSS_SELECTOR, "#caseTable tbody tr")
         cols = row.find_elements(By.TAG_NAME,"td")
         if len(cols) >= 4:
@@ -94,19 +133,20 @@ def index():
 
             orders_link_tag = cols[1].find_elements(By.TAG_NAME, "a")[-1]
             orders_url = orders_link_tag.get_attribute("href")
+            driver.quit()
+            driver = driver_load()
             driver.get(f"{orders_url}")
-            time.sleep(5)
+            time.sleep(2)
             soup = BeautifulSoup(driver.page_source,"html.parser")
             orders_table = soup.find("table",{"id":"caseTable"})
             orders = []
-            
+            driver.quit()
             if orders_table:
                 tbody = orders_table.find("tbody")
                 if tbody:
                     rows = tbody.find_all("tr")
                     for row in rows:
                         order_cols = row.find_all("td")
-                        print(order_cols)
                         if len(order_cols)<5:
                             continue
                         order_dict = {
@@ -116,19 +156,17 @@ def index():
                             "hindi_order": order_cols[4].find("a")["href"].strip() if order_cols[4].find("a") else None
                             }
                         orders.append(order_dict)
-            driver.close()
             def clean_html(text):
                 return BeautifulSoup(text, "html.parser").text.strip()
 
             case_info = [clean_html(item) for item in case_info_raw if item.strip()]
             petitioner_info = [clean_html(item) for item in petitioner_info_raw if item.strip()]
             listing_info = [clean_html(item) for item in listing_info_raw if item.strip()]
-
+            
         # Prepare final dictionary
             case_data = {
                 "case_number": case_info[0] if len(case_info) > 0 else "N/A",
                 "status": case_info[1] if len(case_info) > 1 else "N/A",
-                "orders_url" : orders_url,
                 "petitioner": petitioner_info[0] if len(petitioner_info) > 0 else "N/A",
                 "respondent": petitioner_info[2] if len(petitioner_info) > 2 else "N/A",
                 "next_date": listing_info[0].replace("NEXT DATE:", "").strip() if len(listing_info) > 0 else "N/A",
@@ -146,16 +184,8 @@ def index():
                         db.session.add(order_obj)
                         db.session.commit()
         else:
-            case_data = {"error": "Unexpected table format"}
+            case_data = {"error": "No data Found"}
+
         return render_template('case_info.html',result = case_data, orders = orders)
 if __name__ == '__main__':
     app.run(debug=True)
-
-"""
-class Orders(db.Model):
-    id=db.Column(db.Integer,primary_key=True)
-    case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
-    order_date = db.Column(db.String())
-    corrigendum_link = db.Column(db.String())
-    corrigendum_date = db.Column(db.String())
-    hindi_order = db.Column(db.String())"""
