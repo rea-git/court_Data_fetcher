@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-class Case:
+class Case(db.Model):
     id = db.Column(db.Integer,primary_key=True)
     case_type = db.Column(db.String(), nullable =False)
     case_num=db.Column(db.String(), nullable = False)
@@ -30,16 +30,16 @@ class Case:
     listing_date =db.Column(db.String())
     next_date = db.Column(db.String())
     court_no = db.Column(db.String())
-class Orders:
+class Orders(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
     order_date = db.Column(db.String())
     corrigendum_link = db.Column(db.String())
     corrigendum_date = db.Column(db.String())
     hindi_order = db.Column(db.String())
-    
+
 chrome_options = Options()
-chrome_options.add_argument("--headless=new")  # no browser opens
+chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 driver = webdriver.Chrome(options = chrome_options)
@@ -81,13 +81,9 @@ def index():
         driver.find_element(By.ID, "captchaInput").send_keys(user_captcha)
 
         search = driver.find_element(By.ID,"search")
-        try:
-            search.click()
-        except ElementClickInterceptedException:
-            print("click intercepted. Using JavaScript to click instead")
-            driver.execute_script("arguments[0].click()",search)
+        driver.execute_script("arguments[0].click()",search)
 
-        time.sleep(10)
+        time.sleep(5)
 
         row = driver.find_element(By.CSS_SELECTOR, "#caseTable tbody tr")
         cols = row.find_elements(By.TAG_NAME,"td")
@@ -99,10 +95,9 @@ def index():
             orders_link_tag = cols[1].find_elements(By.TAG_NAME, "a")[-1]
             orders_url = orders_link_tag.get_attribute("href")
             driver.get(f"{orders_url}")
-            time.sleep(20)
+            time.sleep(5)
             soup = BeautifulSoup(driver.page_source,"html.parser")
             orders_table = soup.find("table",{"id":"caseTable"})
-            print(orders_table)
             orders = []
             
             if orders_table:
@@ -122,8 +117,6 @@ def index():
                             }
                         orders.append(order_dict)
             driver.close()
-            #driver.switch_to.window(driver.window_handles[0])
-
             def clean_html(text):
                 return BeautifulSoup(text, "html.parser").text.strip()
 
@@ -142,16 +135,27 @@ def index():
                 "last_date": listing_info[1].replace("Last Date:", "").strip() if len(listing_info) > 1 else "N/A",
                 "court_no": listing_info[2].replace("COURT NO:", "").strip() if len(listing_info) > 2 else "N/A"
             }
-            #case_obj = Case(case_type = case_type, case_num = case_num, case_year = case_year, case_status=case_data['status'],petitioner = case_data['petitioner'],respondent = case_data['respondent'],listing_date = case_data['last_date'],next_date = case_data['next_date'],court_no=case_data['court_no'])
-
-            #db.session.add(case_obj)
-            #db.session.commit()
+            check = Case.query.filter_by(case_type = case_type, case_num = case_num, case_year = case_year).first()
+            if not check:
+                case_obj = Case(case_type = case_type, case_num = case_num, case_year = case_year, case_status=case_data['status'],petitioner = case_data['petitioner'],respondent = case_data['respondent'],listing_date = case_data['last_date'],next_date = case_data['next_date'],court_no=case_data['court_no'])
+                db.session.add(case_obj)
+                db.session.commit()
+                if orders:
+                    for order in orders:
+                        order_obj = Orders(case_id=case_obj.id,order_date = order['order_date'],corrigendum_link=order['corrigendum_link'],corrigendum_date=order['corrigendum_date'],hindi_order=order['hindi_order'])
+                        db.session.add(order_obj)
+                        db.session.commit()
         else:
             case_data = {"error": "Unexpected table format"}
         return render_template('case_info.html',result = case_data, orders = orders)
 if __name__ == '__main__':
     app.run(debug=True)
-    #with app.app_context():
-        #db.create_all()
 
-
+"""
+class Orders(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
+    order_date = db.Column(db.String())
+    corrigendum_link = db.Column(db.String())
+    corrigendum_date = db.Column(db.String())
+    hindi_order = db.Column(db.String())"""
