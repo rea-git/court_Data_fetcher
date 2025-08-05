@@ -5,7 +5,11 @@ from flask_sqlalchemy import SQLAlchemy
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import ElementClickInterceptedException
 from bs4 import BeautifulSoup
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 import time
 
@@ -33,8 +37,13 @@ class Orders:
     corrigendum_link = db.Column(db.String())
     corrigendum_date = db.Column(db.String())
     hindi_order = db.Column(db.String())
+    
+chrome_options = Options()
+chrome_options.add_argument("--headless=new")  # no browser opens
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--no-sandbox")
+driver = webdriver.Chrome(options = chrome_options)
 
-driver = webdriver.Chrome()
 def driver_load():
     driver.get("https://delhihighcourt.nic.in/app/get-case-type-status")
     time.sleep(1)
@@ -71,9 +80,14 @@ def index():
 
         driver.find_element(By.ID, "captchaInput").send_keys(user_captcha)
 
-        driver.find_element(By.ID,"search").click()
+        search = driver.find_element(By.ID,"search")
+        try:
+            search.click()
+        except ElementClickInterceptedException:
+            print("click intercepted. Using JavaScript to click instead")
+            driver.execute_script("arguments[0].click()",search)
 
-        time.sleep(1)
+        time.sleep(10)
 
         row = driver.find_element(By.CSS_SELECTOR, "#caseTable tbody tr")
         cols = row.find_elements(By.TAG_NAME,"td")
@@ -84,30 +98,31 @@ def index():
 
             orders_link_tag = cols[1].find_elements(By.TAG_NAME, "a")[-1]
             orders_url = orders_link_tag.get_attribute("href")
-
-            driver.execute_script("window.open('');")
-            driver.switch_to.window(driver.window_handles[1])
-            driver.get(orders_url)
-
-            orders_page_html = driver.page_source
-            soup = BeautifulSoup(orders_page_html,"html.parser")
+            driver.get(f"{orders_url}")
+            time.sleep(20)
+            soup = BeautifulSoup(driver.page_source,"html.parser")
             orders_table = soup.find("table",{"id":"caseTable"})
+            print(orders_table)
             orders = []
-
+            
             if orders_table:
-                rows = orders_table.find("tbody").find_all("tr")
-                for row in rows:
-                    order_cols = row.find_all("td")
-
-                    order_dict = {
-                        "order_date": order_cols[2].text.strip() if len(order_cols) > 2 else "N/A",
-                "corrigendum_link": order_cols[3].find("a")["href"].strip() if len(order_cols) > 3 and order_cols[3].find("a") else None,
-                "corrigendum_date": order_cols[3].text.strip() if len(order_cols) > 3 else None,
-                "hindi_order": order_cols[4].find("a")["href"].strip() if len(order_cols) > 4 and order_cols[4].find("a") else None
-                    }
-                    orders.append(order_dict)
+                tbody = orders_table.find("tbody")
+                if tbody:
+                    rows = tbody.find_all("tr")
+                    for row in rows:
+                        order_cols = row.find_all("td")
+                        print(order_cols)
+                        if len(order_cols)<5:
+                            continue
+                        order_dict = {
+                            "order_date": order_cols[2].text.strip() if len(order_cols) > 2 else "N/A",
+                            "corrigendum_link": order_cols[1].find("a")["href"].strip() if order_cols[1].find("a") else None,
+                            "corrigendum_date": order_cols[3].text.strip() if len(order_cols) > 3 else None,
+                            "hindi_order": order_cols[4].find("a")["href"].strip() if order_cols[4].find("a") else None
+                            }
+                        orders.append(order_dict)
             driver.close()
-            driver.switch_to.window(driver.window_handles[0])
+            #driver.switch_to.window(driver.window_handles[0])
 
             def clean_html(text):
                 return BeautifulSoup(text, "html.parser").text.strip()
@@ -120,6 +135,7 @@ def index():
             case_data = {
                 "case_number": case_info[0] if len(case_info) > 0 else "N/A",
                 "status": case_info[1] if len(case_info) > 1 else "N/A",
+                "orders_url" : orders_url,
                 "petitioner": petitioner_info[0] if len(petitioner_info) > 0 else "N/A",
                 "respondent": petitioner_info[2] if len(petitioner_info) > 2 else "N/A",
                 "next_date": listing_info[0].replace("NEXT DATE:", "").strip() if len(listing_info) > 0 else "N/A",
@@ -132,7 +148,7 @@ def index():
             #db.session.commit()
         else:
             case_data = {"error": "Unexpected table format"}
-        return render_template('case_info.html',result = case_data)
+        return render_template('case_info.html',result = case_data, orders = orders)
 if __name__ == '__main__':
     app.run(debug=True)
     #with app.app_context():
