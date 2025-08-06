@@ -26,7 +26,7 @@ class Case(db.Model):
     listing_date =db.Column(db.String())
     next_date = db.Column(db.String())
     court_no = db.Column(db.String())
-    orders = db.relationship('Orders', backref='case', lazy=True)
+    orders = db.relationship('Orders', backref='Case', lazy=True)
 class Orders(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
@@ -37,12 +37,12 @@ class Orders(db.Model):
 
 
 def driver_load():
-    """chrome_options = Options()
+    chrome_options = Options()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
-    driver = webdriver.Chrome(options = chrome_options)"""
-    driver=webdriver.Chrome()
+    driver = webdriver.Chrome(options = chrome_options)
+    #driver=webdriver.Chrome()
     return driver
 def case_options(driver):
     case_type_dropdown = Select(driver.find_element(By.ID, 'case_type'))
@@ -73,24 +73,12 @@ def index():
         if len(case_history)>0:
             for case in case_history:
                 case_data = {
-                "case_number": case.case_number,
-                "status": case.status,
-                "petitioner": case.petitioner,
-                "respondent": case.respondent,
-                "next_date": case.next_date,
-                "last_date": case.last_date,
-                "court_no": case.court_no
+                "case_id":case.id,
+                "case_type":case.case_type,
+                "case_num": case.case_num,
+                "case_year":case.case_year,
             }
-                order_history = case.orders[0] if case.orders else None
-                
-                order_data = {
-                    "order_date": order_history.order_date if order_history else "N/A",
-                    "corrigendum_link": order_history.corrigendum_link if order_history else None,
-                    "corrigendum_date": order_history.corrigendum_date if order_history else None,
-                    "hindi_order": order_history.hindi_date if order_history else None
-                            }
-                case_list.append([case_data,order_data])
-            
+                case_list.append(case_data)
         session['captcha_code'] = captcha_code
         session['case_type_options'] = case_type_options
         session['case_year_options'] = case_year_options
@@ -187,5 +175,30 @@ def index():
             case_data = {"error": "No data Found"}
 
         return render_template('case_info.html',result = case_data, orders = orders)
+@app.route('/<int:id>')
+def view_case(id):
+    case = Case.query.filter_by(id=id).first()
+    case_data = {
+                "case_number": case.case_num,
+                "status": case.case_status,
+                "petitioner": case.petitioner,
+                "respondent": case.respondent,
+                "next_date": case.next_date,
+                "last_date": case.listing_date,
+                "court_no": case.court_no
+            }
+    order_list = []
+    print(case.orders)
+    if case.orders:
+        for order in case.orders:
+            order_data = {
+                "order_date": order.order_date if order else "N/A",
+                "corrigendum_link": order.corrigendum_link if order else None,
+                "corrigendum_date": order.corrigendum_date if order else None,
+                "hindi_order": order.hindi_order if order else None
+                    }
+            print(order_data)
+            order_list.append(order_data)
+    return render_template('case_info.html',result = case_data,orders=order_list)
 if __name__ == '__main__':
     app.run(debug=True)

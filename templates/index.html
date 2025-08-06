@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
-    <!--<link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 </head>
 <body>
 
@@ -46,58 +46,28 @@
             <input type="submit" value="submit">
         </form>
     </div>
-    <div id ='case-history'>
-         {% if case_list %}
+    <div id = 'history'>
         <table>
             <thead>
                 <tr>
-                    <th>Case Number</th>
-                    <th>Status</th>
-                    <th>Petitioner</th>
-                    <th>Respondent</th>
-                    <th>Next Date</th>
-                    <th>Last Date</th>
-                    <th>Court No</th>
-                    <th>Order Date</th>
-                    <th>Corrigendum Link</th>
-                    <th>Corrigendum Date</th>
-                    <th>Hindi Order</th>
+                    <td><strong>Id</strong></td>
+                    <td><strong>Case Type</strong></td>
+                    <td><strong>Case Number</strong></td>
+                    <td><strong>Case Year</strong></td>
                 </tr>
             </thead>
             <tbody>
-                {% for case_data, order_data in case_list %}
+                {% for case in case_list %}
                 <tr>
-                    <td>{{ case_data.case_number }}</td>
-                    <td>{{ case_data.status }}</td>
-                    <td>{{ case_data.petitioner }}</td>
-                    <td>{{ case_data.respondent }}</td>
-                    <td>{{ case_data.next_date }}</td>
-                    <td>{{ case_data.last_date }}</td>
-                    <td>{{ case_data.court_no }}</td>
-                    <td>{{ order_data.order_date }}</td>
-                    <td>
-                        {% if order_data.corrigendum_link %}
-                            <a href="{{ order_data.corrigendum_link }}" target="_blank">Link</a>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                    <td>{{ order_data.corrigendum_date or "N/A" }}</td>
-                    <td>
-                        {% if order_data.hindi_order %}
-                            <a href="{{ order_data.hindi_order }}" target="_blank">Hindi Order</a>
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
+                    <td><a href="/{{case.case_id}}">{{case.case_id}}</a></td>
+                    <td>{{case.case_type}}</td>
+                    <td>{{case.case_num}}</td>
+                    <td>{{case.case_year}}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-    {% else %}
-        <p>No case history found.</p>
-    {% endif %}
-
     </div>
+
 </body>
 </html>

@@ -47,3 +47,20 @@ input[type="submit"] {
     border-radius: 5px;
     cursor: pointer;
 }
+
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.table th, .table td {
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    text-align: left;
+}
+
+.table th {
+    background-color: #e9ecef;
+}
