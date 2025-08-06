@@ -114,6 +114,7 @@ def index():
         
         row = driver.find_element(By.CSS_SELECTOR, "#caseTable tbody tr")
         cols = row.find_elements(By.TAG_NAME,"td")
+        orders = []
         if len(cols) >= 4:
             case_info_raw = cols[1].get_attribute("innerHTML").strip().split("<br>")
             petitioner_info_raw = cols[2].get_attribute("innerHTML").strip().split("<br>")
@@ -127,7 +128,6 @@ def index():
             time.sleep(2)
             soup = BeautifulSoup(driver.page_source,"html.parser")
             orders_table = soup.find("table",{"id":"caseTable"})
-            orders = []
             driver.quit()
             if orders_table:
                 tbody = orders_table.find("tbody")
