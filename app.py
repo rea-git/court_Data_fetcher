@@ -202,4 +202,4 @@ def view_case(id):
             order_list.append(order_data)
     return render_template('case_info.html',result = case_data,orders=order_list)
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
