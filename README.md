@@ -10,7 +10,7 @@
 
 ## Project Overview
 
-This project creates a local Flask-based web application that fetches case data from the Delhi High Court website using Selenium automation and BeautifulSoup scraping, and stores it in a local database.
+This project creates a local Flask-based web application that fetches case data from the **Delhi High Court** website using Selenium automation and BeautifulSoup scraping, and stores it in a local database.
 
 ---
 
