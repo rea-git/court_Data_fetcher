@@ -16,6 +16,7 @@ app.secret_key = 'test'
 db = SQLAlchemy(app)
 
 class Case(db.Model):
+    __tablename__ = 'case'
     id = db.Column(db.Integer,primary_key=True)
     case_type = db.Column(db.String(), nullable =False)
     case_num=db.Column(db.String(), nullable = False)
@@ -28,13 +29,13 @@ class Case(db.Model):
     court_no = db.Column(db.String())
     orders = db.relationship('Orders', backref='Case', lazy=True)
 class Orders(db.Model):
+    __tablename__='orders'
     id=db.Column(db.Integer,primary_key=True)
     case_id = db.Column(db.Integer,db.ForeignKey('case.id'),nullable=False)
     order_date = db.Column(db.String())
     corrigendum_link = db.Column(db.String())
     corrigendum_date = db.Column(db.String())
     hindi_order = db.Column(db.String())
-
 
 def driver_load():
     chrome_options = Options()
