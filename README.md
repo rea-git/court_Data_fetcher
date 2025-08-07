@@ -45,3 +45,32 @@ This project creates a local Flask-based web application that fetches case data 
 - Using Selenium, the generated number is captured and displayed on the local site.
 - Users must enter the same captcha manually into the form to match what the real site expects.
 
+## How to Run This Flask App
+
+## 1. Clone github
+```bash
+git clone https://github.com/rea.git/court_Data_fetcher
+cd court_Data_fetcher
+```
+
+### 2. Create a Virtual Environment
+
+```bash
+python -m venv venv
+```
+
+### 3. Activate the Virtual Environment
+```bash
+venv\Scripts\activate
+```
+
+### 4. Install Required Packages
+```bash
+pip install -r requirements.txt
+```
+
+### 6. Run the App
+
+```bash
+run.bat
+```
